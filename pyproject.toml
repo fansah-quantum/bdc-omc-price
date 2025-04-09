@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "bdc-omc-price"
+version = "0.1.0"
+description = ""
+authors = ["Forster <fansah@quantumgroupgh.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+sqlalchemy = "^2.0.39"
+boto3 = "^1.37.25"
+apscheduler = "^3.11.0"
+requests = "^2.32.3"
+fastapi = {extras = ["all"], version = "^0.115.12"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
