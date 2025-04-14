@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from errors.exception import InternalProcessingError
 from tools.log import Log
-from models.users import User
+from models import users
 
 common_logger = Log(name=f"{__name__}")
 
@@ -93,7 +93,7 @@ def is_token_expired(recovery_token_time: datetime) -> bool:
 def get_user_data(user_data: Dict) -> Dict:
     print(user_data)
     if "email" in user_data and user_data["email"]:
-        return {"email": User.email == user_data["email"]}
-    return {"mobile_number": User.mobile_number == user_data["mobile_number"]}
+        return {"email": users.User.email == user_data["email"]}
+    return {"mobile_number": users.User.mobile_number == user_data["mobile_number"]}
 
 

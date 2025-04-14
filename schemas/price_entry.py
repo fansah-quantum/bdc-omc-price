@@ -224,7 +224,6 @@ class BDCPriceEntryOut(BaseModel):
 class OMCBDCFilterParams(BaseModel):
     seller_type: SellerType = Field("omc", description="Filter by seller type")
     product_type: Optional[ProductType] = None 
-    omc_or_bdc_id: Optional[int] = None
     window: Optional[WindowType] = None
     transaction_term: Optional[TransactionTerm] = None
     sort_by: Optional[str] = None
@@ -232,13 +231,19 @@ class OMCBDCFilterParams(BaseModel):
     from_date: Optional[str] = None
     to_date: Optional[str] = None
     page: Optional[int] = 1
-    size: Optional[int] = 50
+    size: Optional[int] = 10
 
 
 
 class PresignedUrlItem(BaseModel):
     image_name: str
     url: HttpUrl
+
+
+
+class DelResponse(BaseModel):
+    message: str = Field(..., description="Success message")
+    status: bool 
 
 
 

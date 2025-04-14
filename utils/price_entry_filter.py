@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlalchemy import paginate as sql_paginate
-from models.bdcs import PriceEntry
+from models.bdcs import PriceEntry, ProductPrice
 from pydantic import BaseModel
 
 class PriceEntryQuery:
@@ -14,13 +14,22 @@ class PriceEntryQuery:
         self.params = params
         self.user_id = user_id
 
+
+        
+
     def apply_filters(self, query):
+        
+        needs_variation_join = any([
+            getattr(self.params, 'product_type', None)
+        ])
+        if needs_variation_join:
+            query = query.join(ProductPrice)
+
+
         if self.params.seller_type:
             query = query.filter(PriceEntry.seller_type == self.params.seller_type)
         if self.params.product_type:
-            query = query.filter(PriceEntry.product_type == self.params.product_type)
-        if self.params.omc_or_bdc_id:
-            query = query.filter(PriceEntry.omc_or_bdc_id == self.params.omc_or_bdc_id)
+            query = query.filter(ProductPrice.product_type == self.params.product_type)
         if self.params.window:
             query = query.filter(PriceEntry.window == self.params.window)
         if self.params.transaction_term:

@@ -76,7 +76,7 @@ def update_object_in_database(db_class, query_param: str, value: Any, update_dat
             return None
         
 
-def check_if_user_exist(user_email_or_mobile: Dict[str , Any]) ->Union[Dict, None]:
+def check_if_user_exist(user_email: Dict[str , Any]) ->Union[Dict, None]:
     """
     Check if a user exists in the database
     Args:
@@ -87,9 +87,7 @@ def check_if_user_exist(user_email_or_mobile: Dict[str , Any]) ->Union[Dict, Non
         Any
     """
     with session.CreateDBSession() as db_session:
-        login_type = "email" if user_email_or_mobile.get("email", None) else "mobile_number"
-        login_filter = get_user_data(user_email_or_mobile)
-        user = db_session.query(User).filter(login_filter.get(login_type)).first()
+        user = db_session.query(User).filter(User.email == user_email['email']).first()
         return user if user else None
 
         

@@ -2,13 +2,14 @@ from typing import Dict, Union, List
 from pydantic import BaseModel
 
 from schemas.price_entry import OMCPriceEntryCreate, BDCPriceEntryCreate, OMCPriceEntryUpdate
-from models.bdcs import PriceEntry
+from models.bdcs import PriceEntry, PriceEntryImage
 from utils import sql
 from utils.session import CreateDBSession
 from utils.price_entry_filter import PriceEntryQuery
 from services import s3
 from models.users import User
 from fastapi import UploadFile
+
 
 
 
@@ -104,7 +105,7 @@ class PriceEntryController:
         
 
     @staticmethod
-    def update_price_entry(price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], price_entry_id: int) -> Dict:
+    async def update_price_entry(price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], price_entry_id: int,new_price_entry_images: List[UploadFile] = None) -> Dict:
         """Update a price entry in the database
 
         :param price_entry_data: The price entry data to be updated
@@ -112,6 +113,9 @@ class PriceEntryController:
         :return: The updated price entry data
         :rtype: Dict
         """
+        if new_price_entry_images:
+            new_price_entry_images = await  s3.upload_multiple_images_to_s3(new_price_entry_images)
+
 
         with CreateDBSession() as db_session:
             
@@ -120,9 +124,12 @@ class PriceEntryController:
                 db_session=db_session, 
                 price_entry_id=price_entry_id,
                 product=price_entry_data.product,
-                images=price_entry_data.images,
-                basic_fields=omc_bdc_price_entry_fields
+                images=None,
+                basic_fields=omc_bdc_price_entry_fields,
+                new_price_entry_images=new_price_entry_images
                 )
+            if not price_entry:
+                raise ValueError("Price entry not found")
             return price_entry
         
 
@@ -137,7 +144,7 @@ class PriceEntryController:
         """
 
         with CreateDBSession() as db_session:
-            price_entries = PriceEntryQuery(db_session, params).paginate()
+            price_entries = PriceEntryQuery(db_session, params, user_id).paginate()
             return price_entries
         
 
@@ -185,7 +192,34 @@ class PriceEntryController:
         url = await s3.upload_to_s3(file)
         return url
     
-            
+    @staticmethod
+    async def delete_price_entry_image(entry_id: int, image_id: int) -> Dict:
+        """Delete a price entry image from the database
+
+        :param entry_id: The id of the price entry
+        :type entry_id: int
+        :param image_id: The id of the image to be deleted
+        :type image_id: int
+        :return: The deleted image data
+        :rtype: Dict
+        """
+        with CreateDBSession() as db_session:
+            price_entry = db_session.query(PriceEntry).filter(PriceEntry.id == entry_id).first()
+            if not price_entry:
+                raise ValueError("Price entry not found")
+            image = db_session.query(PriceEntryImage).filter(PriceEntryImage.id == image_id).first()
+            if not image:
+                raise ValueError("Image not found")
+            if image.image_url:
+               response = await s3.delete_from_s3(image.image_url)
+            db_session.delete(image)
+            db_session.commit()
+            db_session.refresh(price_entry)
+            return {
+                "message": "Image deleted successfully",
+                "status": True
+            }
+        
 
 
         

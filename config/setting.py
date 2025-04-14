@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE: int = 3600
     MAIL_PASSWORD: str = "knrqxfnigdkblumh"
     DEFAULT_PASSWORD: str = "123456789"
+    LDAP_SERVER: str  = "ldap://172.18.200.95:389"
 
     class Config:
         env_file = ".env"

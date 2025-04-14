@@ -52,8 +52,7 @@ class AuthToken:
                 "exp": datetime.utcnow()
                 + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE),
                 "iat": datetime.utcnow(),
-                "sub": user.email,
-                'role': user.mobile_number,
+                "sub": user.email
             }
             return jwt.encode(
                 payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM
@@ -96,8 +95,8 @@ class AuthToken:
     def verify_user_token(token: str)-> dict:
         """Verify admin token and return user data"""
         user_email_or_mobile = AuthToken.verify_auth_token(token)
-        user_email_or_mobile = {"email": user_email_or_mobile["sub"], "mobile_number": user_email_or_mobile["role"]}
-        db_user = check_if_user_exist(user_email_or_mobile)
+        user_email = {"email": user_email_or_mobile["sub"]}
+        db_user = check_if_user_exist(user_email)
         if not db_user:
             raise AuthException(msg="Invalid token", code=404)
         return db_user

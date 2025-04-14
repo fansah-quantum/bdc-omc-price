@@ -78,8 +78,9 @@ async def upload_multiple_images_to_s3(files: list[UploadFile]) -> list[dict]:
             extention = file.filename.split(".")[-1]
             s3_key = f"omc-bdc/docs/{uuid.uuid4()}.{extention}"
             s3_client.upload_fileobj(file.file,settings.S3_BUCKET_NAME, s3_key)
+            full_image_path = f"{settings.S3_ENDPOINT_URL}/{settings.S3_BUCKET_NAME}/{s3_key}"
             uploaded_files.append({
-                "image_url": s3_key,
+                "image_url": full_image_path,
             })
         except ClientError as e:
             s3_logger.error(f"Error uploading file to S3: {str(e)}")
@@ -100,10 +101,14 @@ def create_presigned_url (s3_session: session.Session, object_name: str, expirat
 
 
 
-def delete_from_s3(s3_client:session.Session, s3_key: str):
+async def delete_from_s3(image_url: str) -> bool:
+    """Delete a file from S3
+    """
+    s3_key = image_url.split(f"{settings.S3_ENDPOINT_URL}/{settings.S3_BUCKET_NAME}/")[-1]
     try:
+        s3_client = get_s3_client()
         s3_client.delete_object(Bucket=settings.S3_BUCKET_NAME,Key=s3_key)
-        cacher.delete_key(s3_key)
+        return True
     except ClientError as e:
         s3_logger.error(f"Error deleting file from S3: {str(e)}")
         raise Exception("Error deleting file from S3")

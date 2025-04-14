@@ -164,11 +164,11 @@ class PriceEntry(CustomBase):
         if not basic_fields:
             return
         for key, value in basic_fields.items():
-            setattr(price_entry_instance, key, value)
+            setattr(price_entry_instance, key, value) if value else None
         db_session.add(price_entry_instance)
     
     @staticmethod
-    def update_omc_price_entry(db_session: Session, price_entry_id: int, product: dict, images: List[str], basic_fields: dict):
+    def update_omc_price_entry(db_session: Session, price_entry_id: int, product: dict, images: List[str], basic_fields: dict, new_price_entry_images: List[str] = None) -> Optional["PriceEntry"]:
         price_entry = db_session.query(PriceEntry).filter(PriceEntry.id == price_entry_id).first()
         if price_entry:
             PriceEntry.update_basic_fields(db_session, price_entry, basic_fields)
@@ -176,6 +176,8 @@ class PriceEntry(CustomBase):
                 ProductPrice.update_product_price(db_session, price_entry, product)
             if images:
                 PriceEntryImage.update_images(db_session, price_entry_id, images)
+            if new_price_entry_images:
+                PriceEntryImage.add_images(db_session, price_entry_id, new_price_entry_images)
             db_session.commit()
             db_session.refresh(price_entry)
             return price_entry
@@ -255,8 +257,7 @@ class ProductPrice(CustomBase):
     @staticmethod
     def update_product_price(db_session: Session, price_entry: "PriceEntry", product: dict):
         for key, value in product.model_dump(exclude_unset=True).items():
-            print(key, value, "key and value")
-            setattr(price_entry.product_price, key, value)
+            setattr(price_entry.product_price, key, value) if value else None
         db_session.add(price_entry)  
         return price_entry
 
@@ -293,7 +294,7 @@ class PriceEntryImage(CustomBase):
         if not images:
             return
         for image in images:
-            price_entry_image = PriceEntryImage(price_entry_id=price_entry_id, image_url=image.image_url)
+            price_entry_image = PriceEntryImage(price_entry_id=price_entry_id, image_url=image['image_url'])
             db_session.add(price_entry_image)
         return price_entry_image
     
