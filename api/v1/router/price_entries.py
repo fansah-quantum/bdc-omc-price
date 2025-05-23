@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends,  UploadFile, File, Form
 from typing import Union, Optional, List
-from fastapi_pagination import Page
 from utils.auth import bearerschema, AuthToken
 from schemas.price_entry import SellerType
+from fastapi.background import BackgroundTasks
 
 
 
@@ -19,7 +19,6 @@ from schemas.price_entry import (
     OMCBDCFilterParams,
     TransactionTerm,
     WindowType,
-    ProductType,
     DelResponse,
 )
 from controller.price_entries import PriceEntryController
@@ -32,7 +31,7 @@ price_entry_router = APIRouter()
 
 @price_entry_router.get(
     "/price_entries",
-    response_model=Union[Page[OMCPriceEntryOut], Page[BDCPriceEntryOut]],
+    response_model=Union[List[OMCPriceEntryOut], List[BDCPriceEntryOut]],
 )
 async def get_price_entries(
     params: OMCBDCFilterParams = Depends(), bearer_token=Depends(bearerschema)
@@ -57,74 +56,74 @@ async def get_price_entry_by_id(
 
 
 
-@price_entry_router.post("/price_entries/omc", response_model=OMCPriceEntryOut)
+@price_entry_router.post("/price_entries/omc", response_model=list[OMCPriceEntryOut])
 async def add_omc_price_entry(
+    bg: BackgroundTasks,
     seller_type: SellerType = Form(...),
     date: datetime = Form(...),
-    omc_id: int = Form(...),
+    omc_id: str = Form(...),
     window: WindowType = Form(...),
-    station_location: str = Form(...),
+    station_id: str = Form(...),
     product_type: str = Form(...),
-    product_price: float = Form(...),
-    product_unit_of_measurement: str = Form(None),
+    product_price: str = Form(...),
     price_entries_images: List[UploadFile] = File(None),
     bearer_token=Depends(bearerschema),
 ):
     input_data = {
         "seller_type": seller_type,
         "date": date,
-        "omc_id": omc_id,
+        "omc_id": int(omc_id),
         "window": window,
-        "station_location": station_location,
+        "station_id": int(station_id),
         "product": {
             "product_type": product_type,
             "price": product_price,
-            "unit_of_measurement": product_unit_of_measurement,
         },
     }
     price_entry_data = OMCPriceEntryCreate(**input_data)
     user_info = AuthToken.verify_user_token(bearer_token.credentials)
     price_entry = await PriceEntryController.add_price_entry(
-        user_info, price_entry_data, price_entries_images
+        user_info, price_entry_data,bg,  price_entries_images
     )
     return price_entry
 
 
-@price_entry_router.post("/price_entries/bdc", response_model=BDCPriceEntryOut)
+@price_entry_router.post("/price_entries/bdc", response_model=List[BDCPriceEntryOut])
 async def add_bdc_price_entry(
+    bg: BackgroundTasks,
     seller_type: SellerType = Form(...),
     date: datetime = Form(...),
-    bdc_id: int = Form(...),
+    source_id: str = Form(...),
+    bdc_id: str = Form(...),
     window: WindowType = Form(...),
     town_of_loading: str = Form(...),
     transaction_term: TransactionTerm = Form(...),
-    product_credit_price: float = Form(...),
-    product_credit_price_days: int = Form(...),
+    product_credit_price: str = Form(None),
+    product_credit_price_days: str = Form(None),
     product_type: str = Form(...),
-    product_price: float = Form(...),
-    product_unit_of_measurement: str = Form(None),
+    product_price: str = Form(...),
     price_entries_images: List[UploadFile] = File(None),
     bearer_token=Depends(bearerschema),
 ):
     input_data = {
         "seller_type": seller_type,
         "date": date,
-        "bdc_id": bdc_id,
+        "bdc_id": int(bdc_id),
         "window": window,
         "town_of_loading": town_of_loading,
         "transaction_term": transaction_term,
+        "source_id": int(source_id) if source_id else None,	
         "product": {
             "product_type": product_type,
             "price": product_price,
-            "unit_of_measurement": product_unit_of_measurement,
-            "credit_days": product_credit_price_days,
-            "credit_price": product_credit_price,
+            "credit_days": int(product_credit_price_days) if product_credit_price_days else None,
+            "credit_price": float(product_credit_price) if product_credit_price else None,
         },
     }
     price_entry_data = BDCPriceEntryCreate(**input_data)
     user_info = AuthToken.verify_user_token(bearer_token.credentials)
     price_entry = await PriceEntryController.add_price_entry(
-        user_info, price_entry_data, price_entries_images
+        user_info, price_entry_data,bg, price_entries_images
     )
     return price_entry
 
@@ -132,23 +131,24 @@ async def add_bdc_price_entry(
     "/price_entries/omc/{price_entry_id}", response_model=OMCPriceEntryOut
 )
 async def update_omc_price_entry(
+    bg: BackgroundTasks,
     price_entry_id: int,
-    omc_id: Optional[int] = None,
-    window: Optional[WindowType] = None,
-    station_location: Optional[str] = None,
-    product_type: Optional[ProductType] = None,
-    product_price: Optional[float] = None,
-    product_unit_of_measurement: Optional[str] = None,
-    new_price_entries_images: Optional[List[UploadFile]] = File(None),
+    omc_id: Optional[str] = Form(None),
+    window: Optional[WindowType] = Form(None),
+    station_id: Optional[str] = Form(None),
+    product_type: Optional[str] = Form(None),
+    product_price: Optional[str] = Form(None),
+    product_unit_of_measurement: Optional[str] = Form(None),
+    new_price_entries_images: List[UploadFile] = File(None),
     bearer_token=Depends(bearerschema),
 ):
     input_data = {
-        "omc_id": omc_id,
+        "omc_id": int(omc_id) if omc_id else None,
         "window": window,
-        "station_location": station_location,
+        "station_id": int(station_id) if station_id else None,	
         "product": {
             "product_type": product_type,
-            "price": product_price,
+            "price": float(product_price) if product_price else None,
             "unit_of_measurement": product_unit_of_measurement,
         },
     }
@@ -156,7 +156,7 @@ async def update_omc_price_entry(
     price_entry_data = OMCPriceEntryUpdate(**input_data)
     AuthToken.verify_user_token(bearer_token.credentials)
     price_entry = await PriceEntryController.update_price_entry(
-        price_entry_data, price_entry_id, new_price_entries_images
+        price_entry_data, price_entry_id, "omc", bg, new_price_entries_images
     )
     return price_entry
 
@@ -167,31 +167,34 @@ async def update_omc_price_entry(
     "/price_entries/bdc/{price_entry_id}", response_model=BDCPriceEntryOut
 )
 async def update_bdc_price_entry(
+    bg: BackgroundTasks,
     price_entry_id: int,
-    bdc_id: Optional[int] = None,
-    window: Optional[WindowType] = None,
-    town_of_loading: Optional[str] = None,
-    transaction_term: Optional[TransactionTerm] = None,
-    product_credit_price: Optional[float] = None,
-    product_credit_price_days: Optional[int] = None,
-    product_type: Optional[ProductType] = None,
-    product_price: Optional[float] = None,
-    product_unit_of_measurement: Optional[str] = None,
-    new_price_entries_images: Optional[List[UploadFile]] = File(None),
+    bdc_id: Optional[str] = Form(None),
+    window: Optional[WindowType] = Form(None),
+    town_of_loading: Optional[str] = Form(None),
+    source_id: Optional[str] = Form(None),
+    transaction_term: Optional[TransactionTerm] = Form(None),
+    product_credit_price: Optional[str] = Form(None),
+    product_credit_price_days: Optional[str] = Form(None),
+    product_type: Optional[str] = Form(None),
+    product_price: Optional[str] = Form(None),
+    product_unit_of_measurement: Optional[str] = Form(None),
+    new_price_entries_images: List[UploadFile] = File(None),
     bearer_token=Depends(bearerschema),
 ):
     
     input_data = {
-        "bdc_id": bdc_id,
+        "bdc_id": int(bdc_id) if bdc_id else None,
         "window": window,
         "town_of_loading": town_of_loading,
         "transaction_term": transaction_term,
+        "source_id": int(source_id) if source_id else None,
         "product": {
             "product_type": product_type,
-            "price": product_price,
+            "price": float(product_price) if product_price else None,
             "unit_of_measurement": product_unit_of_measurement,
-            "credit_days": product_credit_price_days,
-            "credit_price": product_credit_price,
+            "credit_days": int(product_credit_price_days) if product_credit_price_days else None,
+            "credit_price": float(product_credit_price) if product_credit_price else None,
         },
     }
     
@@ -199,10 +202,9 @@ async def update_bdc_price_entry(
     price_entry_data =  BDCPriceEntryUpdate(**input_data)
     AuthToken.verify_user_token(bearer_token.credentials)
     price_entry = await  PriceEntryController.update_price_entry(
-        price_entry_data, price_entry_id, new_price_entries_images
+        price_entry_data, price_entry_id,"bdc", bg, new_price_entries_images
     )
     return price_entry
-
 
 @price_entry_router.delete("/price_entries/{price_entry_id}", response_model=DelResponse)
 async def delete_price_entry_image(price_entry_id: int, image_id: int):

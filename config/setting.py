@@ -19,11 +19,11 @@ class Settings(BaseSettings):
     API_TITLE: str = "BDC-OMC Price API"
     APP_DESCRIPTION: str = "This is the API for the BDC-OMC Price Service"
     DATABASE_URL: str = "sqlite:///./test.db"
-    POSTGRES_URL: str = "postgresql://postgres:database@localhost:5432/omc_bdc"
+    POSTGRES_URL: str = "postgresql://postgres:database@localhost:5432/omc_bdc_app"
     TESTING: bool = True
     AWS_ACCESS_KEY: str 
     AWS_SECRET_KEY: str 
-    S3_ENDPOINT_URL: str = "http://192.168.127.43:9000"
+    S3_ENDPOINT_URL: str = "http://192.168.127.43:9003"
     S3_BUCKET_NAME: str = "omc-bdc-price"
     S3_REGION : str = "S3_REGION"
     X_SUBSCRIPTION_KEY: str=  "tester"
@@ -38,7 +38,18 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE: int = 3600
     MAIL_PASSWORD: str = "knrqxfnigdkblumh"
     DEFAULT_PASSWORD: str = "123456789"
-    LDAP_SERVER: str  = "ldap://172.18.200.95:389"
+    LDAP_SERVER: str  = "ldap://172.18.200.25"
+    OMC_BDC_URL: str = ":41095/pc/api/v1/price"
+    OMC_SYNC_URL: str 
+    BDC_SYNC_URL: str 
+    OMC_API_KEY: str 
+    BDC_API_KEY: str
+    STATIONS_SYNC_URL: str 
+    STATIONS_API_KEY: str 
+    SYSTEM_ADMIN_EMAIL: str 
+    SYSTEM_ADMIN_PASSWORD : str 
+    SYSTEM_ADMIN_NAME : str 
+    
 
     class Config:
         env_file = ".env"

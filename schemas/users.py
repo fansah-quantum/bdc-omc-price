@@ -146,19 +146,8 @@ class LDAPLogin(BaseModel):
 
 class UserLogin(BaseModel):
     email: EmailStr = Field(...)
-    pin: Optional[str] = Field(None, min_length=6, max_length=6)
-    password: Optional[str]  = Field(None, min_length=8)
-    @field_validator('pin')
-    def validate_pin(cls, v):
-        if v is None and cls.password is None:
-            raise ValueError("Either pin or  password must be provided")
-        return v
-    @field_validator('password')
-    def validate_password(cls, v):
-        if v is None and cls.pin is None:
-            raise ValueError("Either pin or password must be provided")
-        return v
-        
+    password: str  = Field()
+    
 
 
 class ResetPin(BaseModel):
@@ -199,9 +188,9 @@ class UserOut(BaseModel):
     id: int
     email: Optional[EmailStr]
     created_at: datetime
-    updated_at: datetime
-    last_login: Optional[datetime]
-
+    name: Optional[str]
+    company_id: Optional[int]
+    is_admin: Optional[bool] = False
     
 class Token(BaseModel):
     access_token: str
@@ -219,4 +208,41 @@ class UserLoginOut(BaseModel):
 class UserMessage(BaseModel):
     message: str
     status: bool
+
+
+
+
+class CompanyAdminIn(BaseModel):
+    email: EmailStr = Field(...)
+    company_id: int = Field(...) 
+    name: str = Field(...)
+
+
+class CompanyAllowedUsers(BaseModel):
+    email: EmailStr = Field(...)
+
+class AdminUser(BaseModel):
+    id: int
+    email: Optional[EmailStr]
+    created_at: datetime
+    name: Optional[str]
+
+
+
+class SystemAdminOut(BaseModel):
+    token: str
+    user: AdminUser
+
+
+
+class CompanyUser(BaseModel):
+    email: EmailStr = Field(...)
+    is_admin: Optional[bool] = False
+    company_id: Optional[int] = None
+
+class CompanyUserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    is_admin: Optional[bool] = False
+    company_id: Optional[int] = None
+    
 

@@ -2,9 +2,9 @@
 This is the main file of the project. It is the entry point of the application.
 
 """
-import asyncio
 
 from controller.sync import SyncController
+from services import on_start
 
 
 
@@ -21,4 +21,6 @@ async def startup_event():
     It is used to initialize the application and start the background tasks.
     """
     SyncController.schedule_retry()
+    on_start.create_default_admin()
+
     

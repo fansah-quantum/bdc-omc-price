@@ -21,4 +21,9 @@ class BDCOMCOut(BaseModel):
 class BDCOMCAllOut(BaseModel):
     bdcs: list[BDCOMCOut]
     omcs: list[BDCOMCOut]
+
+
+class DelMessage(BaseModel):
+    message: str
+    status: bool
     

@@ -5,24 +5,18 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict, HttpUrl
 from models.bdcs import ProductType, SellerType, WindowType, TransactionTerm
 
 class ProductPriceBase(BaseModel, use_enum_values=True):
-    product_type: ProductType
-    price: float = Field(..., gt=0, description="Price must be greater than 0")
+    product_type: str
+    price: str = Field(..., description="Price must be greater than 0")
     unit_of_measurement: Optional[str] = Field(
         None,
         description="Auto-populated based on product type"
     )
     
-    @field_validator('unit_of_measurement', mode='before')
-    def set_unit_of_measurement(cls, v, info):
-        if 'product_type' in info.data:  # Access the 'data' attribute of ValidationInfo
-            if info.data['product_type'] == ProductType.LPG:
-                return "Ghana Cedis per Kg"
-            return "Ghana Cedis per litre"
-        return v
+    
     
 
 class ProductPriceBaseUpdate(BaseModel, use_enum_values=True):
-    product_type: Optional[ProductType] = None
+    product_type: Optional[str] = None
     price: Optional[float] = None
     unit_of_measurement: Optional[str] = None
     
@@ -33,6 +27,27 @@ class ProductPriceBaseUpdate(BaseModel, use_enum_values=True):
                 return "Ghana Cedis per Kg"
             return "Ghana Cedis per litre"
         return v
+    
+
+class BDCProductPriceBase(BaseModel, use_enum_values=True):
+    product_type: str
+    price: float = Field(..., description="Price must be greater than 0")
+    unit_of_measurement: Optional[str] = Field(
+        None,
+        description="Auto-populated based on product type"
+    )
+
+
+    @field_validator('unit_of_measurement', mode='before')
+    def set_unit_of_measurement(cls, v, info):
+        if 'product_type' in info.data:  # Access the 'data' attribute of ValidationInfo
+            if info.data['product_type'] == ProductType.LPG:
+                return "Ghana Cedis per Kg"
+            return "Ghana Cedis per litre"
+        return v
+
+
+
 
 class BDCProductPriceCreate(ProductPriceBase):
     credit_price: Optional[float] = Field(
@@ -60,16 +75,13 @@ class OMCPriceEntryCreate(BaseModel):
     )
     omc_id: int = Field(..., description="ID of the OMC")
     window: WindowType
-    station_location: str = Field(
-        ...,
-        min_length=2,
-        max_length=100,
-        description="Location of the station (e.g., 'Ofankor, Greater Accra')"
-    )
+    
     product: ProductPriceBase = Field(
         ...,
         description="product and their prices"
     )
+    # source_id: int = Field(description="omc source id")
+    station_id: int = Field(description="station id")
     
     @field_validator('seller_type')
     def validate_seller_type(cls, v):
@@ -102,6 +114,8 @@ class BDCPriceEntryCreate(BaseModel):
         ...,
         description=" products and it's price"
     )
+
+    source_id: int = Field(..., description="bdc source id")
 
 
     @field_validator('seller_type')
@@ -143,17 +157,28 @@ class PriceEntryUpdate(BaseModel):
     images: Optional[List[PriceEntryImageUpdate]] = None
 
 # Response schemas
-class BDCProductPriceOut(ProductPriceBase):
+class BDCProductPriceOut(BDCProductPriceBase):
     id: int
     credit_price: Optional[float] = None
     credit_days: Optional[int] = None
 
-class ProductPriceOut(ProductPriceBase):
+class ProductPriceOut(BaseModel):
     id: int
+    product_type: str
+    price: float
+    unit_of_measurement: Optional[str] = None
+
+
+
+
 
 class PriceEntryImageOut(PriceEntryImageBase):
     id: int
     uploaded_at: datetime
+
+
+
+
 
 class PriceEntryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -182,7 +207,7 @@ class PriceEntryOut(BaseModel):
 class OMCPriceEntryUpdate(BaseModel):
     omc_id: Optional[int] = None
     window: Optional[WindowType] = None
-    station_location: Optional[str] = None
+    station_id: Optional[int] = None
     product: Optional[ProductPriceBaseUpdate] = None
     images: Optional[List[PriceEntryImageUpdate]] = None
 
@@ -195,15 +220,23 @@ class BDCPriceEntryUpdate(BaseModel):
     images: Optional[List[PriceEntryImageUpdate]] = None
 
 
+class StationOut(BaseModel):
+    id: int
+    name: str
+    location: str
+    
+
+
 class OMCPriceEntryOut(BaseModel):
     id: int
     user_id: int
     seller_type: SellerType
     date: datetime
     window: WindowType
-    station_location: str
     product_price: ProductPriceOut
     images: List[PriceEntryImageOut]
+    omc_id: Optional[int] = None
+    station: Optional[StationOut] 
     created_at: datetime
     updated_at: datetime
 
@@ -212,6 +245,7 @@ class BDCPriceEntryOut(BaseModel):
     user_id: int
     seller_type: SellerType
     date: datetime
+    bdc_id: int
     window: WindowType
     town_of_loading: str
     transaction_term: TransactionTerm
@@ -230,8 +264,6 @@ class OMCBDCFilterParams(BaseModel):
     sort_order: Optional[str] = "desc"
     from_date: Optional[str] = None
     to_date: Optional[str] = None
-    page: Optional[int] = 1
-    size: Optional[int] = 10
 
 
 

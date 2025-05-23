@@ -1,4 +1,5 @@
 from typing import Any, Dict
+import json
 
 import requests
 from requests import Response
@@ -8,6 +9,8 @@ from datetime import datetime, timezone
 from errors.exception import InternalProcessingError
 from tools.log import Log
 from models import users
+from models.bdcs import ProductType
+
 
 common_logger = Log(name=f"{__name__}")
 
@@ -71,6 +74,7 @@ def get_password_hash(password):
 
 
 
+
 def is_token_expired(recovery_token_time: datetime) -> bool:
     """
     Check if the recovery token time is before the current time.
@@ -91,9 +95,39 @@ def is_token_expired(recovery_token_time: datetime) -> bool:
 
 
 def get_user_data(user_data: Dict) -> Dict:
-    print(user_data)
     if "email" in user_data and user_data["email"]:
         return {"email": users.User.email == user_data["email"]}
     return {"mobile_number": users.User.mobile_number == user_data["mobile_number"]}
 
 
+def compute_unit_of_measurement(product_type:str )-> str : 
+    """
+    Compute the unit of measurement based on the product type.
+    
+    Args:
+        product_type (str): The product type.
+    
+    Returns:
+        str: The unit of measurement.
+    """
+    if product_type == "LPG":
+        return "Ghana Cedis per Kg"
+    return "Ghana Cedis per litre"
+        
+
+
+
+def remove_dict_dulicates(list_of_dicts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Remove duplicates from a list of dictionaries based on the 'id' key.
+    
+    Args:
+        list_of_dicts (list[dict]): The list of dictionaries to process.
+    
+    Returns:
+        list[dict]: The list of dictionaries with duplicates removed.
+    """
+    dict_value = list({json.dumps(d, sort_keys=True) for d in list_of_dicts})
+    dict_value = [json.loads(d) for d in dict_value]
+    return dict_value
+   

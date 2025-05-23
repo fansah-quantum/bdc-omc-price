@@ -16,7 +16,7 @@ class CustomBase(setup.Base):
     
     id = mapped_column(Integer, primary_key=True, index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(), default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(), default=func.now(), onupdate=func.now())
+    updated_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), default=func.now(), onupdate=func.now())
     deleted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(), nullable=True)
 
     

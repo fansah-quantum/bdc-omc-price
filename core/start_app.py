@@ -6,7 +6,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 
 
 
-from api.v1.router import health, sample_route, users, bdcs_omcs, price_entries
+from api.v1.router import health, users, bdcs_omcs, price_entries, companies, stations, products
 from config.setting import Settings
 from core import setup as db_setup
 from errors.exception import AuthException, InternalProcessingError
@@ -29,15 +29,13 @@ class AppBuilder:
             prefix=settings.API_PREFIX,
             tags=["API Health"],
         )
-    # register the sample route
+
         self._app.include_router(
-            sample_route.sample_router,
+            companies.company_router,
             prefix=settings.API_PREFIX,
-            tags=["Sample Route"],
+            tags=["Companies"],
         )
-
-
-
+    
         self._app.include_router(
             users.user_router,
             prefix=settings.API_PREFIX,
@@ -55,6 +53,18 @@ class AppBuilder:
             prefix=settings.API_PREFIX,
             tags=["Price Entries"],
         )
+
+        self._app.include_router(
+            stations.stations_router,
+            prefix=settings.API_PREFIX,
+            tags=["Stations"],
+        )
+        self._app.include_router(
+            products.product_router,
+            prefix=settings.API_PREFIX,
+            tags=["Products"],
+        )
+
 
 
         

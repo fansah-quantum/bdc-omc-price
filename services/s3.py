@@ -21,11 +21,15 @@ s3_logger = Log(name=f"{__name__}")
 
 def get_s3_client():
     """Get an S3 client"""
-    return new_session.client('s3',
+    try:
+        return new_session.client('s3',
         aws_access_key_id=settings.AWS_ACCESS_KEY,
         aws_secret_access_key=settings.AWS_SECRET_KEY,
         endpoint_url=settings.S3_ENDPOINT_URL,
     )
+    except Exception as e: 
+        s3_logger.error(f"Could not establish s3 connection: {str(e)}")
+        raise Exception("Cold not establish S3 connection")
 
 
 def generate_url_for_frontend_upload(s3_session: session.Session, object_name: str, expiration=3600) -> str:
@@ -85,6 +89,7 @@ async def upload_multiple_images_to_s3(files: list[UploadFile]) -> list[dict]:
         except ClientError as e:
             s3_logger.error(f"Error uploading file to S3: {str(e)}")
             raise Exception("Error uploading file to S3")
+        
     return uploaded_files
     
 

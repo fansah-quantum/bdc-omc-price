@@ -1,7 +1,7 @@
 from typing import Dict, Union, List
 from pydantic import BaseModel
 
-from schemas.price_entry import OMCPriceEntryCreate, BDCPriceEntryCreate, OMCPriceEntryUpdate
+from schemas.price_entry import OMCPriceEntryCreate, BDCPriceEntryCreate
 from models.bdcs import PriceEntry, PriceEntryImage
 from utils import sql
 from utils.session import CreateDBSession
@@ -9,6 +9,10 @@ from utils.price_entry_filter import PriceEntryQuery
 from services import s3
 from models.users import User
 from fastapi import UploadFile
+from controller.sync import  SendController
+from fastapi.background import BackgroundTasks
+from config.setting import settings
+
 
 
 
@@ -63,7 +67,7 @@ class PriceEntryController:
         
 
     @staticmethod
-    async def add_price_entry(user: "User", price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], price_entry_images: List[UploadFile] = None) -> Dict:
+    async def add_price_entry(user: "User", price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], bg:BackgroundTasks, price_entry_images: List[UploadFile] = None) -> Dict:
         """Add a new price entry to the database
 
         :param price_entry_data: The price entry data to be added
@@ -74,38 +78,50 @@ class PriceEntryController:
 
         if price_entry_images:
             price_entry_images = await  s3.upload_multiple_images_to_s3(price_entry_images)
-
         with CreateDBSession() as db_session:
             if isinstance(price_entry_data, OMCPriceEntryCreate):
+                omc_base_data = {
+                    "seller_type": "omc",
+                    "user_id": user.id,
+                    "omc_id": price_entry_data.omc_id,
+                    "window": price_entry_data.window,
+                    "station_id": price_entry_data.station_id,
+                }
                 
-                price_entry = PriceEntry.add_omc_price_entry(
+                price_entry = PriceEntry.add_multiple_omc_price_entry(
                     db_session, 
-                    user.id,
-                    price_entry_data.omc_id, 
-                    price_entry_data.window,
+                    omc_base_data,
                     price_entry_data.product,
-                    price_entry_data.station_location,
                     price_entry_images)
+                bg.add_task(
+                    SendController.send_omc_data_to_company_config,user.id,
+                      [pr.omc_sync_json() for pr in price_entry], f"{settings.OMC_BDC_URL}/omc"
+                      )
             else:
-                price_entry = PriceEntry.add_bdc_price_entry(
+                bdc_base_data = {
+                    "seller_type": "bdc",
+                    "user_id": user.id,
+                    "bdc_id": price_entry_data.bdc_id,
+                    "window": price_entry_data.window,
+                    "town_of_loading": price_entry_data.town_of_loading,
+                    "transaction_term": price_entry_data.transaction_term,
+                    "omc_id": price_entry_data.source_id,
+                }
+                price_entry = PriceEntry.add_multiple_bdc_price_entry(
                     db_session, 
-                    user.id,
-                    price_entry_data.bdc_id, 
-                    price_entry_data.window,
+                    bdc_base_data,
                     price_entry_data.product,
-                    price_entry_data.town_of_loading,
-                    price_entry_data.transaction_term,
                     price_entry_images
                     )
-             
-            #  todo: send data to consumer endpoint based on the data type
-             
-
+                bg.add_task(
+                    SendController.send_omc_data_to_company_config,user.id,
+                      [pr.bdc_sync_json() for pr in price_entry], f"{settings.OMC_BDC_URL}/bdc"
+                      )
             return price_entry
         
 
     @staticmethod
-    async def update_price_entry(price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], price_entry_id: int,new_price_entry_images: List[UploadFile] = None) -> Dict:
+    async def update_price_entry(price_entry_data: Union[OMCPriceEntryCreate, BDCPriceEntryCreate], price_entry_id: int, seller_type: str ,bg: BackgroundTasks, new_price_entry_images: List[UploadFile] = None) -> Dict:
         """Update a price entry in the database
 
         :param price_entry_data: The price entry data to be updated
@@ -115,14 +131,22 @@ class PriceEntryController:
         """
         if new_price_entry_images:
             new_price_entry_images = await  s3.upload_multiple_images_to_s3(new_price_entry_images)
-
+        
+        seller_type_path = {
+            "omc": f"{settings.OMC_BDC_URL}/omc/{price_entry_id}",
+            "bdc": f"{settings.OMC_BDC_URL}/bdc/{price_entry_id}",
+        }
 
         with CreateDBSession() as db_session:
             
             omc_bdc_price_entry_fields = price_entry_data.model_dump(exclude=["product", "images"], exclude_unset=True)
+            if omc_bdc_price_entry_fields.get('source_id', None):
+                omc_bdc_price_entry_fields['omc_id'] = omc_bdc_price_entry_fields.get('source_id')
+                omc_bdc_price_entry_fields.pop('source_id')
             price_entry = PriceEntry.update_omc_price_entry(
                 db_session=db_session, 
                 price_entry_id=price_entry_id,
+                seller_type=seller_type,
                 product=price_entry_data.product,
                 images=None,
                 basic_fields=omc_bdc_price_entry_fields,
@@ -130,6 +154,10 @@ class PriceEntryController:
                 )
             if not price_entry:
                 raise ValueError("Price entry not found")
+            bg.add_task(
+                SendController.update_omc_data_to_company_config, price_entry.user_id,
+                [price_entry.omc_sync_json() if seller_type == 'omc' else price_entry.bdc_sync_json()], seller_type_path[seller_type]
+            )
             return price_entry
         
 
@@ -161,8 +189,6 @@ class PriceEntryController:
         for image in image_names:
             url = s3.generate_url_for_frontend_upload(s3.get_s3_client(), image, 3600)
             presigned_url_list.append({"image_name": image, "url": url})
-            # presigned_url_list.append({image: url})
-        print(presigned_url_list)
         return presigned_url_list
     
 
@@ -183,7 +209,6 @@ class PriceEntryController:
     @staticmethod
     async def upload_image(file) -> str:
         """Upload an image to S3
-
         :param file: The image file
         :type file: UploadFile
         :return: The URL of the image
@@ -219,6 +244,10 @@ class PriceEntryController:
                 "message": "Image deleted successfully",
                 "status": True
             }
+        
+
+
+
         
 
 

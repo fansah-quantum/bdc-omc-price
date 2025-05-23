@@ -1,9 +1,11 @@
 
 from typing import Any,Dict, Union
 
+
 from utils import session
-from models.users import User
+from models.users import User, SystemAdmin
 from utils.common import get_user_data
+
 
 
 def add_object_to_database(item: Any) -> dict:
@@ -76,7 +78,7 @@ def update_object_in_database(db_class, query_param: str, value: Any, update_dat
             return None
         
 
-def check_if_user_exist(user_email: Dict[str , Any]) ->Union[Dict, None]:
+def check_if_user_exist( user_email: Dict[str , Any], is_system_admin: bool = False) ->Union[Dict, None]:
     """
     Check if a user exists in the database
     Args:
@@ -87,7 +89,10 @@ def check_if_user_exist(user_email: Dict[str , Any]) ->Union[Dict, None]:
         Any
     """
     with session.CreateDBSession() as db_session:
-        user = db_session.query(User).filter(User.email == user_email['email']).first()
+        if is_system_admin:
+            user = db_session.query(SystemAdmin).filter(SystemAdmin.email == user_email['email']).first()
+        else:
+            user = db_session.query(User).filter(User.email == user_email['email']).first()
         return user if user else None
 
         

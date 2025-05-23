@@ -1,0 +1,16 @@
+
+.dockerignore
+.env 
+
+*__pycache__*
+*__init__.py*
+*.pyc
+*.pyo
+*.pyd
+
+/.github
+.git
+.env*
+.gitattributes
+.gitignore
+

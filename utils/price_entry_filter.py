@@ -8,6 +8,9 @@ from fastapi_pagination.ext.sqlalchemy import paginate as sql_paginate
 from models.bdcs import PriceEntry, ProductPrice
 from pydantic import BaseModel
 
+
+from models.bdcs import ProductType
+
 class PriceEntryQuery:
     def __init__(self, db_session: Session, params: BaseModel, user_id: int = None):
         self.db_session = db_session
@@ -63,7 +66,12 @@ class PriceEntryQuery:
         query = self.apply_filters(query)
         query = self.apply_sorting(query)
         query = self.apply_date_range_filter(query)
-        return sql_paginate(query, Params(page=self.params.page, size=self.params.size))
+        return query.all()
+
+
+
+    
+
 
 
     
