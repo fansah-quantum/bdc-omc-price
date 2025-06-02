@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from controller.companies import CompanyController
-from schemas.companies import CompanyIn, CompanyOut, CompanyConfigIn, CompanyConfigOut, CompanyUpdate
+from schemas.companies import CompanyIn, CompanyOut, CompanyUpdate
 from utils.auth import AuthToken, bearerschema
 
 

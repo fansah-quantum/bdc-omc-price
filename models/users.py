@@ -11,7 +11,9 @@ from utils.common import get_password_hash
 
 
 
+
 from models.custom_base import CustomBase
+
 
 
 class User(CustomBase):
