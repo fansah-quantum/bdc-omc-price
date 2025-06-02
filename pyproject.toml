@@ -12,14 +12,14 @@ boto3 = "^1.37.25"
 apscheduler = "^3.11.0"
 requests = "^2.32.3"
 fastapi = {extras = ["all"], version = "^0.115.12"}
-psycopg2 = "^2.9.10"
 passlib = "^1.7.4"
-python-ldap = { version = "^3.4.0", markers = "sys_platform != 'win32'" }
 fastapi-pagination = "^0.12.34"
 pyjwt = "^2.10.1"
 python-jose = "^3.3.0"
-ldap3 = "^2.9.1"
 psycopg2-binary = "^2.9.10"
+uvicorn = "^0.34.2"
+ldap3 = "^2.9.1"
+
 
 
 [build-system]
